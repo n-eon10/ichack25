@@ -17,13 +17,14 @@ class SolveTSPUsingACO:
             self.pheromone = initial_pheromone
 
     class Ant:
-        def __init__(self, alpha, beta, num_nodes, edges):
+        def __init__(self, alpha, beta, num_nodes, edges, start_node=0):
             self.alpha = alpha
             self.beta = beta
             self.num_nodes = num_nodes
             self.edges = edges
             self.tour = None
             self.distance = 0.0
+            self.start_node = start_node
 
         def _select_node(self):
             roulette_wheel = 0.0
@@ -43,7 +44,7 @@ class SolveTSPUsingACO:
                     return unvisited_node
 
         def find_tour(self):
-            self.tour = [random.randint(0, self.num_nodes - 1)]
+            self.tour = [self.start_node]
             while len(self.tour) < self.num_nodes:
                 self.tour.append(self._select_node())
             return self.tour
