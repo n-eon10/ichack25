@@ -28,8 +28,8 @@ def hello_world():
         nodes = nodes
     )
 
-    runtime, distance = model.run()
-    print(runtime, distance)
+    runtime, distance, best_tour = model.run()
+    print(runtime, distance, best_tour)
     return content
 
 def calculate_distance(distance1, distance2):

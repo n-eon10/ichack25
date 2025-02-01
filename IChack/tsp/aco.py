@@ -153,7 +153,7 @@ class SolveTSPUsingACO:
         # print('Sequence : <- {0} ->'.format(' - '.join(str(self.labels[i]) for i in self.global_best_tour)))
         # print('Total distance travelled to complete the tour : {0}\n'.format(round(self.global_best_distance, 2)))
         runtime = tm.time() - start
-        return runtime, self.global_best_distance
+        return runtime, self.global_best_distance, self.global_best_tour
 
     def plot(self, line_width=1, point_radius=math.sqrt(2.0), annotation_size=8, dpi=120, save=True, name=None):
         x = [self.nodes[i][0] for i in self.global_best_tour]
