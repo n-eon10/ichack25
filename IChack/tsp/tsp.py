@@ -1,7 +1,5 @@
 from flask import Flask, request
 from math import sin, cos, sqrt, atan2, radians
-import numpy as np
-import random
 from aco import SolveTSPUsingACO
 
 app = Flask(__name__)
