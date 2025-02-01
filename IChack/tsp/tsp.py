@@ -2,6 +2,7 @@ from flask import Flask, request
 from math import sin, cos, sqrt, atan2, radians
 import numpy as np
 import random
+from aco import SolveTSPUsingACO
 
 app = Flask(__name__)
 
@@ -9,14 +10,26 @@ app = Flask(__name__)
 def hello_world():
     content = request.get_json()
     
-    starting = tuple(content['start'])
+    colony_size = 15
+    steps = 50
+
+    mode = 'ACS'
+    nodes = []
+
     points = content['coordinates']
 
-    distances = {}
-
     for point in points:
-        distances[tuple(point)] = calculate_distance(tuple(point), starting)
-    print(distances)
+        nodes.append(tuple(point))
+    
+    model = SolveTSPUsingACO(
+        mode = mode,
+        colony_size = colony_size,
+        steps = steps,
+        nodes = nodes
+    )
+
+    runtime, distance = model.run()
+    print(runtime, distance)
     return content
 
 def calculate_distance(distance1, distance2):
