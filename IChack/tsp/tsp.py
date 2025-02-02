@@ -16,11 +16,11 @@ def generate_locations():
     Generates 10 random tourist locations within a given radius.
     Expects a JSON payload with `lat`, `long`, and `radius`.
     """
+
     data = request.get_json()
     lat = data.get("lat")
     long = data.get("long")
     radius = data.get("radius", 2000)  # Default radius
-    query = data.get("query", "must see tourist locations")
 
     key = os.getenv("PLACES_API_KEY")
     if not key:
@@ -28,7 +28,7 @@ def generate_locations():
 
     base_url = (
         f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?"
-        f"location={lat},{long}&radius={radius}&keyword={query}&key={key}"
+        f"location={lat},{long}&radius={radius}&keyword={"must see tourist locations"}&key={key}"
     )
 
     response = requests.get(base_url)
@@ -38,9 +38,9 @@ def generate_locations():
         return jsonify({"error": "Invalid response from Google Places API"}), 500
 
     res_list = []
-    lat_long_map = {}
+    lat_long_list = []
 
-    for idx, r in enumerate(data.get('results', [])):
+    for r in data.get('results', []):
         photo_url = None
         if 'photos' in r:
             photo_reference = r['photos'][0]['photo_reference']
@@ -63,9 +63,12 @@ def generate_locations():
         }
 
         res_list.append(place_data)
-        lat_long_map[idx] = (place_lat, place_long)
+        lat_long_list.append((place_lat, place_long))
+    
+    best_tour_indices = get_tsp(lat_long_list)
+    ordered_locations = [res_list[i] for i in best_tour_indices]
 
-    return jsonify({"locations": res_list, "lat_long_map": lat_long_map})
+    return jsonify({"locations": res_list, "ordered_locations": ordered_locations})
 
 
 def get_tsp(points):
