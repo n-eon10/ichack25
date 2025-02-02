@@ -1,10 +1,11 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import * as turf from '@turf/turf';
 
 const Map = () => {
   const mapContainer = useRef(null);
   const map = useRef(null);
+  const [currentLocation, setCurrentLocation] = useState(null);
 
   mapboxgl.accessToken = "pk.eyJ1IjoibmVvbmNvZGVzIiwiYSI6ImNtMnFpYW9oajExY2kyanNjdzhzdjI5a2kifQ.-2O_gboh9urZ6sxd4ygdxw";
 
@@ -18,15 +19,12 @@ const Map = () => {
   const calculateRadius = () => {
     if (!map.current) return 0;
     
-    // Get map bounds
     const bounds = map.current.getBounds();
     const center = map.current.getCenter();
     
-    // Calculate distance to southwest and northeast corners
     const sw = bounds.getSouthWest();
     const ne = bounds.getNorthEast();
     
-    // Calculate distances using Turf.js
     const distanceSW = turf.distance(
       [center.lng, center.lat],
       [sw.lng, sw.lat],
@@ -39,8 +37,26 @@ const Map = () => {
       { units: 'kilometers' }
     );
 
-    // Return the maximum distance (radius to farthest border)
     return Math.max(distanceSW, distanceNE);
+  };
+
+  const handleLocationCapture = () => {
+    if (!map.current) return;
+    
+    const center = map.current.getCenter();
+    const radius = calculateRadius();
+    
+    setCurrentLocation({
+      longitude: center.lng,
+      latitude: center.lat,
+      radius_km: radius
+    });
+
+    console.log('Captured Location:', {
+      longitude: center.lng,
+      latitude: center.lat,
+      radius_km: radius
+    });
   };
 
   useEffect(() => {
@@ -55,7 +71,6 @@ const Map = () => {
 
     map.current.addControl(new mapboxgl.NavigationControl());
 
-    // Add moveend listener
     map.current.on('moveend', () => {
       const center = map.current.getCenter();
       const radius = calculateRadius();
@@ -65,10 +80,6 @@ const Map = () => {
         latitude: center.lat,
         radius_km: radius
       });
-    });
-
-    coordinates.forEach(coord => {
-      new mapboxgl.Marker().setLngLat(coord).addTo(map.current);
     });
 
     map.current.on("load", () => {
@@ -123,7 +134,27 @@ const Map = () => {
     }
   };
 
-  return <div ref={mapContainer} className="w-screen h-screen" />;
+  return (
+    <div className="relative w-screen h-screen">
+      <div ref={mapContainer} className="w-full h-full" />
+      
+      <button
+        onClick={handleLocationCapture}
+        className="absolute top-4 left-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-blue-600 transition-colors z-10"
+      >
+        Capture Map Area
+      </button>
+
+      {currentLocation && (
+        <div className="absolute top-20 left-4 bg-black p-4 rounded-lg shadow-lg z-10">
+          <h3 className="font-bold mb-2">Captured Area:</h3>
+          <p>Longitude: {currentLocation.longitude.toFixed(4)}</p>
+          <p>Latitude: {currentLocation.latitude.toFixed(4)}</p>
+          <p>Radius: {currentLocation.radius_km.toFixed(1)} km</p>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default Map;
