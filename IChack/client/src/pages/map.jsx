@@ -133,28 +133,8 @@ const Map = () => {
         long: center.lng.toString(),
         radius: radius.toString()
       };
-
-      getData(data);
       
     });
-
-    const getData = async (data) => {
-      const response = await fetch(`http://127.0.0.1:5000/tsp`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data)
-      })
-      .then(response => response.json())
-      .then(data => {
-          data = data['ordered_locations'];
-          console.log(data);
-      })
-      .catch((error) => {
-          console.error('Error:', error);
-      });
-    };
 
     map.current.on("load", () => {
       map.current.addSource("route", {

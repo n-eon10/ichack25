@@ -25,7 +25,8 @@ def generate_locations():
     data = request.get_json()
     lat = data.get("lat")
     long = data.get("long")
-    radius = data.get("radius", 2000)  # Default radius
+    radius = 100000 # Default radius
+    print(lat, long, radius)
 
     key = os.getenv("PLACES_API_KEY")
     if not key:
@@ -38,7 +39,6 @@ def generate_locations():
 
     response = requests.get(base_url)
     data = response.json()
-
     if "results" not in data:
         return jsonify({"error": "Invalid response from Google Places API"}), 500
 
@@ -69,6 +69,9 @@ def generate_locations():
 
         res_list.append(place_data)
         lat_long_list.append((place_lat, place_long))
+    
+    if len(lat_long_list) == 0:
+        return jsonify({"error": "No tourist locations found"}), 404
     
     best_tour_indices = get_tsp(lat_long_list)
     ordered_locations = [res_list[i] for i in best_tour_indices]
