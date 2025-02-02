@@ -6,6 +6,8 @@ const Map = () => {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const [currentLocation, setCurrentLocation] = useState(null);
+  const [startingCoordinate, setStartingCoordinate] = useState(null);
+  const markerRef = useRef(null);
 
   mapboxgl.accessToken = "pk.eyJ1IjoibmVvbmNvZGVzIiwiYSI6ImNtMnFpYW9oajExY2kyanNjdzhzdjI5a2kifQ.-2O_gboh9urZ6sxd4ygdxw";
 
@@ -71,6 +73,26 @@ const Map = () => {
 
     map.current.addControl(new mapboxgl.NavigationControl());
 
+    // Add click handler for setting starting position
+    map.current.on('click', (e) => {
+      const { lng, lat } = e.lngLat;
+      
+      // Remove previous marker
+      if (markerRef.current) {
+        markerRef.current.remove();
+      }
+
+      // Create new marker
+      const marker = new mapboxgl.Marker({
+        color: '#FF0000',
+        draggable: false
+      }).setLngLat([lng, lat])
+        .addTo(map.current);
+
+      markerRef.current = marker;
+      setStartingCoordinate([lng, lat]);
+    });
+
     map.current.on('moveend', () => {
       const center = map.current.getCenter();
       const radius = calculateRadius();
@@ -129,7 +151,6 @@ const Map = () => {
     });
   }, []);
 
-
   const fetchRoute = async (coordinates) => {
     if (coordinates.length < 2) return;
   
@@ -138,7 +159,7 @@ const Map = () => {
       properties: {},
       geometry: {
         type: "LineString",
-        coordinates: [], // This will store all points cumulatively
+        coordinates: [],
       },
     };
   
@@ -154,21 +175,17 @@ const Map = () => {
         if (data.routes.length) {
           const segmentGeometry = data.routes[0].geometry.coordinates;
   
-          // Add new segment points to the cumulative route
           cumulativeRoute.geometry.coordinates.push(...segmentGeometry);
   
-          // Ensure source exists before updating
           const routeSource = map.current.getSource("route");
           if (routeSource) {
             routeSource.setData(cumulativeRoute);
           }
   
-          // Fit map bounds dynamically
           const bounds = new mapboxgl.LngLatBounds();
           cumulativeRoute.geometry.coordinates.forEach(coord => bounds.extend(coord));
           map.current.fitBounds(bounds, { padding: 50 });
   
-          // Wait before drawing the next segment (animation effect)
           await new Promise((resolve) => setTimeout(resolve, 2000));
         }
       } catch (error) {
@@ -176,33 +193,29 @@ const Map = () => {
       }
     }
   };
-  
 
   const styles = `
-  .map-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-  }
+    .map-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
 
-  .mapboxgl-canvas {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-  }
-
-`;
-
+    .mapboxgl-canvas {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+    }
+  `;
 
   return (
     <div className="flex h-full w-full">
       <style>{styles}</style>
       <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
-
       
       <button
         onClick={handleLocationCapture}
@@ -217,6 +230,19 @@ const Map = () => {
           <p>Longitude: {currentLocation.longitude.toFixed(4)}</p>
           <p>Latitude: {currentLocation.latitude.toFixed(4)}</p>
           <p>Radius: {currentLocation.radius_km.toFixed(1)} km</p>
+          
+          <div className="mt-4 pt-2 border-t border-gray-600">
+            <p className="font-semibold mb-2">Starting Position:</p>
+            {startingCoordinate ? (
+              <p>
+                {startingCoordinate[0].toFixed(4)}, {startingCoordinate[1].toFixed(4)}
+              </p>
+            ) : (
+              <p className="text-gray-400 text-sm">
+                Click anywhere on the map to set starting position
+              </p>
+            )}
+          </div>
         </div>
       )}
     </div>
