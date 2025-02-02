@@ -80,6 +80,28 @@ const Map = () => {
         latitude: center.lat,
         radius_km: radius
       });
+
+      const data = {
+        lat: center.lat.toString(),
+        long: center.lng.toString(),
+        radius: radius.toString()
+      };
+
+      fetch('/tps', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+      })
+      .then(response => response.json())
+      .then(data => {
+          data = data['ordered_locations'];
+      })
+      .catch((error) => {
+          console.error('Error:', error);
+      });
+      
     });
 
     map.current.on("load", () => {
@@ -107,6 +129,7 @@ const Map = () => {
     });
   }, []);
 
+  // Fetch route data from Mapbox Directions API
   const fetchRoute = async () => {
     if (coordinates.length < 2) return;
 
