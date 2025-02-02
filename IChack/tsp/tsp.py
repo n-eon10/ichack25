@@ -33,7 +33,7 @@ def generate_locations():
 
     base_url = (
         f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?"
-        f"location={lat},{long}&radius={radius}&keyword={"must see tourist locations"}&key={key}"
+        f"location={lat},{long}&radius={radius}&keyword=must see tourist locations&key={key}"
     )
 
     response = requests.get(base_url)

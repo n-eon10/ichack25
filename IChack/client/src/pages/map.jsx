@@ -55,8 +55,8 @@ const Map = () => {
     });
 
     console.log('Captured Location:', {
-      longitude: center.lng,
       latitude: center.lat,
+      longitude: center.lng,
       radius_km: radius
     });
   };
@@ -74,7 +74,10 @@ const Map = () => {
     map.current.addControl(new mapboxgl.NavigationControl());
 
     // Add click handler for setting starting position
-    map.current.on('click', (e) => {
+    map.current.on('click', (e) => {      
+      const center = map.current.getCenter();
+      const radius = calculateRadius();
+
       const { lng, lat } = e.lngLat;
       
       // Remove previous marker
@@ -90,7 +93,28 @@ const Map = () => {
         .addTo(map.current);
 
       markerRef.current = marker;
-      setStartingCoordinate([lng, lat]);
+      setStartingCoordinate([lat, lng]);
+            // Fetch from backend
+            const data = {
+              lat: center.lat.toString(),
+              long: center.lng.toString(),
+              radius: radius.toString()
+            };
+            fetch(' http://127.0.0.1:5000/tsp', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                data = data['ordered_locations'];
+                console.log(data);
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
     });
 
     map.current.on('moveend', () => {
@@ -98,8 +122,8 @@ const Map = () => {
       const radius = calculateRadius();
       
       console.log('Map Center:', {
-        longitude: center.lng,
         latitude: center.lat,
+        longitude: center.lng,
         radius_km: radius
       });
    
@@ -233,8 +257,8 @@ const Map = () => {
       {currentLocation && (
         <div className="absolute top-20 left-4 bg-black p-4 rounded-lg shadow-lg z-10 text-white">
           <h3 className="font-bold mb-2">Captured Area:</h3>
-          <p>Longitude: {currentLocation.longitude.toFixed(4)}</p>
           <p>Latitude: {currentLocation.latitude.toFixed(4)}</p>
+          <p>Longitude: {currentLocation.longitude.toFixed(4)}</p>
           <p>Radius: {currentLocation.radius_km.toFixed(1)} km</p>
           
           <div className="mt-4 pt-2 border-t border-gray-600">
