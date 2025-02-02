@@ -81,12 +81,12 @@ const Map = () => {
         radius_km: radius
       });
 
+      // Fetch from backend
       const data = {
         lat: center.lat.toString(),
         long: center.lng.toString(),
         radius: radius.toString()
       };
-
       fetch('/tps', {
         method: 'POST',
         headers: {
@@ -97,11 +97,11 @@ const Map = () => {
       .then(response => response.json())
       .then(data => {
           data = data['ordered_locations'];
+          console.log(data);
       })
       .catch((error) => {
           console.error('Error:', error);
       });
-      
     });
 
     map.current.on("load", () => {
@@ -125,41 +125,84 @@ const Map = () => {
         paint: { "line-color": "#ff0000", "line-width": 5 },
       });
 
-      fetchRoute();
+      fetchRoute(coordinates);
     });
   }, []);
 
-  // Fetch route data from Mapbox Directions API
-  const fetchRoute = async () => {
+
+  const fetchRoute = async (coordinates) => {
     if (coordinates.length < 2) return;
-
-    const coordsString = coordinates.map(coord => coord.join(",")).join(";");
-    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordsString}?geometries=geojson&access_token=${mapboxgl.accessToken}`;
-
-    try {
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.routes.length) {
-        const route = data.routes[0].geometry;
-        map.current.getSource("route").setData({
-          type: "Feature",
-          properties: {},
-          geometry: route,
-        });
-
-        const bounds = new mapboxgl.LngLatBounds();
-        coordinates.forEach(coord => bounds.extend(coord));
-        map.current.fitBounds(bounds, { padding: 50 });
+  
+    let cumulativeRoute = {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        type: "LineString",
+        coordinates: [], // This will store all points cumulatively
+      },
+    };
+  
+    for (let i = 0; i < coordinates.length - 1; i++) {
+      const segment = [coordinates[i], coordinates[i + 1]];
+  
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${segment[0].join(",")};${segment[1].join(",")}?geometries=geojson&access_token=${mapboxgl.accessToken}`;
+  
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+  
+        if (data.routes.length) {
+          const segmentGeometry = data.routes[0].geometry.coordinates;
+  
+          // Add new segment points to the cumulative route
+          cumulativeRoute.geometry.coordinates.push(...segmentGeometry);
+  
+          // Ensure source exists before updating
+          const routeSource = map.current.getSource("route");
+          if (routeSource) {
+            routeSource.setData(cumulativeRoute);
+          }
+  
+          // Fit map bounds dynamically
+          const bounds = new mapboxgl.LngLatBounds();
+          cumulativeRoute.geometry.coordinates.forEach(coord => bounds.extend(coord));
+          map.current.fitBounds(bounds, { padding: 50 });
+  
+          // Wait before drawing the next segment (animation effect)
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      } catch (error) {
+        console.error("Error fetching route:", error);
       }
-    } catch (error) {
-      console.error("Error fetching route:", error);
     }
   };
+  
+
+  const styles = `
+  .map-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .mapboxgl-canvas {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+  }
+
+`;
+
 
   return (
-    <div className="flex w-full h-full">
-      <div ref={mapContainer} className="w-full h-full" />
+    <div className="flex h-full w-full">
+      <style>{styles}</style>
+      <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
+
       
       <button
         onClick={handleLocationCapture}
@@ -169,12 +212,11 @@ const Map = () => {
       </button>
 
       {currentLocation && (
-        <div className="absolute top-20 left-4 bg-black p-4 rounded-lg shadow-lg z-10">
+        <div className="absolute top-20 left-4 bg-black p-4 rounded-lg shadow-lg z-10 text-white">
           <h3 className="font-bold mb-2">Captured Area:</h3>
           <p>Longitude: {currentLocation.longitude.toFixed(4)}</p>
           <p>Latitude: {currentLocation.latitude.toFixed(4)}</p>
           <p>Radius: {currentLocation.radius_km.toFixed(1)} km</p>
-          <p> Click to Set Your Starting Position </p>
         </div>
       )}
     </div>
