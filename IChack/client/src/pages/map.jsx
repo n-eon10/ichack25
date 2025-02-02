@@ -103,36 +103,57 @@ const Map = () => {
         paint: { "line-color": "#ff0000", "line-width": 5 },
       });
 
-      fetchRoute();
+      fetchRoute(coordinates);
     });
   }, []);
 
-  const fetchRoute = async () => {
+  const fetchRoute = async (coordinates) => {
     if (coordinates.length < 2) return;
-
-    const coordsString = coordinates.map(coord => coord.join(",")).join(";");
-    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordsString}?geometries=geojson&access_token=${mapboxgl.accessToken}`;
-
-    try {
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.routes.length) {
-        const route = data.routes[0].geometry;
-        map.current.getSource("route").setData({
-          type: "Feature",
-          properties: {},
-          geometry: route,
-        });
-
-        const bounds = new mapboxgl.LngLatBounds();
-        coordinates.forEach(coord => bounds.extend(coord));
-        map.current.fitBounds(bounds, { padding: 50 });
+  
+    let cumulativeRoute = {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        type: "LineString",
+        coordinates: [], // This will store all points cumulatively
+      },
+    };
+  
+    for (let i = 0; i < coordinates.length - 1; i++) {
+      const segment = [coordinates[i], coordinates[i + 1]];
+  
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${segment[0].join(",")};${segment[1].join(",")}?geometries=geojson&access_token=${mapboxgl.accessToken}`;
+  
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+  
+        if (data.routes.length) {
+          const segmentGeometry = data.routes[0].geometry.coordinates;
+  
+          // Add new segment points to the cumulative route
+          cumulativeRoute.geometry.coordinates.push(...segmentGeometry);
+  
+          // Ensure source exists before updating
+          const routeSource = map.current.getSource("route");
+          if (routeSource) {
+            routeSource.setData(cumulativeRoute);
+          }
+  
+          // Fit map bounds dynamically
+          const bounds = new mapboxgl.LngLatBounds();
+          cumulativeRoute.geometry.coordinates.forEach(coord => bounds.extend(coord));
+          map.current.fitBounds(bounds, { padding: 50 });
+  
+          // Wait before drawing the next segment (animation effect)
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      } catch (error) {
+        console.error("Error fetching route:", error);
       }
-    } catch (error) {
-      console.error("Error fetching route:", error);
     }
   };
+  
 
   const styles = `
   .map-container {
