@@ -173,6 +173,7 @@ const Map = () => {
           <p>Longitude: {currentLocation.longitude.toFixed(4)}</p>
           <p>Latitude: {currentLocation.latitude.toFixed(4)}</p>
           <p>Radius: {currentLocation.radius_km.toFixed(1)} km</p>
+          <p> Click to Set Your Starting Position </p>
         </div>
       )}
     </div>
