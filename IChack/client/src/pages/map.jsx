@@ -134,9 +134,31 @@ const Map = () => {
     }
   };
 
+  const styles = `
+  .map-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .mapboxgl-canvas {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+  }
+
+`;
+
+
   return (
-    <div className="relative w-screen h-screen">
-      <div ref={mapContainer} className="w-full h-full" />
+    <div className="flex h-full w-full">
+      <style>{styles}</style>
+      <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
+
       
       <button
         onClick={handleLocationCapture}
@@ -146,7 +168,7 @@ const Map = () => {
       </button>
 
       {currentLocation && (
-        <div className="absolute top-20 left-4 bg-black p-4 rounded-lg shadow-lg z-10">
+        <div className="absolute top-20 left-4 bg-black p-4 rounded-lg shadow-lg z-10 text-white">
           <h3 className="font-bold mb-2">Captured Area:</h3>
           <p>Longitude: {currentLocation.longitude.toFixed(4)}</p>
           <p>Latitude: {currentLocation.latitude.toFixed(4)}</p>
