@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS, cross_origin
 from math import sin, cos, sqrt, atan2, radians
 from aco import SolveTSPUsingACO
 import requests
@@ -9,9 +10,13 @@ import os
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app, supports_credentials=True)
 
-@app.route("/tsp", methods=['POST'])
+@app.route("/tsp", methods=['GET', 'POST', 'OPTIONS'])
+@cross_origin(supports_credentials=True)
 def generate_locations():
+    if request.method == 'OPTIONS':
+        return '', 200
     """
     Generates 10 random tourist locations within a given radius.
     Expects a JSON payload with `lat`, `long`, and `radius`.
@@ -68,7 +73,7 @@ def generate_locations():
     best_tour_indices = get_tsp(lat_long_list)
     ordered_locations = [res_list[i] for i in best_tour_indices]
 
-    return jsonify({"locations": res_list, "ordered_locations": ordered_locations})
+    return jsonify({"locations": res_list, "ordered_locations": ordered_locations}), 200
 
 
 def get_tsp(points):

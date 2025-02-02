@@ -102,14 +102,20 @@ const Map = () => {
         latitude: center.lat,
         radius_km: radius
       });
-
+   
       // Fetch from backend
       const data = {
         lat: center.lat.toString(),
         long: center.lng.toString(),
         radius: radius.toString()
       };
-      fetch('/tps', {
+
+      getData(data);
+      
+    });
+
+    const getData = async (data) => {
+      const response = await fetch(`http://127.0.0.1:5000/tsp`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -124,7 +130,7 @@ const Map = () => {
       .catch((error) => {
           console.error('Error:', error);
       });
-    });
+    };
 
     map.current.on("load", () => {
       map.current.addSource("route", {
