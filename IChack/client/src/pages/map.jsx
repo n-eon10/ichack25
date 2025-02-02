@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
-import * as turf from '@turf/turf';
+import * as turf from "@turf/turf";
 
 const Map = () => {
   const mapContainer = useRef(null);
@@ -11,32 +11,25 @@ const Map = () => {
 
   mapboxgl.accessToken = "pk.eyJ1IjoibmVvbmNvZGVzIiwiYSI6ImNtMnFpYW9oajExY2kyanNjdzhzdjI5a2kifQ.-2O_gboh9urZ6sxd4ygdxw";
 
-  const coordinates = [
-    [-0.1278, 51.5074], // London
-    [2.3522, 48.8566],  // Paris
-    [4.8357, 45.7640],  // Lyon
-    [9.1895, 45.4642],  // Milan
-  ];
-
   const calculateRadius = () => {
     if (!map.current) return 0;
-    
+
     const bounds = map.current.getBounds();
     const center = map.current.getCenter();
-    
+
     const sw = bounds.getSouthWest();
     const ne = bounds.getNorthEast();
-    
+
     const distanceSW = turf.distance(
       [center.lng, center.lat],
       [sw.lng, sw.lat],
-      { units: 'kilometers' }
+      { units: "kilometers" }
     );
-    
+
     const distanceNE = turf.distance(
       [center.lng, center.lat],
       [ne.lng, ne.lat],
-      { units: 'kilometers' }
+      { units: "kilometers" }
     );
 
     return Math.max(distanceSW, distanceNE);
@@ -44,20 +37,20 @@ const Map = () => {
 
   const handleLocationCapture = () => {
     if (!map.current) return;
-    
+
     const center = map.current.getCenter();
     const radius = calculateRadius();
-    
+
     setCurrentLocation({
       longitude: center.lng,
       latitude: center.lat,
-      radius_km: radius
+      radius_km: radius,
     });
 
-    console.log('Captured Location:', {
+    console.log("Captured Location:", {
       latitude: center.lat,
       longitude: center.lng,
-      radius_km: radius
+      radius_km: radius,
     });
   };
 
@@ -67,19 +60,16 @@ const Map = () => {
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: "mapbox://styles/mapbox/standard",
-      center: coordinates[0],
+      center: [-0.1278, 51.5074], // London
       zoom: 5,
     });
 
     map.current.addControl(new mapboxgl.NavigationControl());
 
     // Add click handler for setting starting position
-    map.current.on('click', (e) => {      
-      const center = map.current.getCenter();
-      const radius = calculateRadius();
-
+    map.current.on("click", (e) => {
       const { lng, lat } = e.lngLat;
-      
+
       // Remove previous marker
       if (markerRef.current) {
         markerRef.current.remove();
@@ -87,53 +77,42 @@ const Map = () => {
 
       // Create new marker
       const marker = new mapboxgl.Marker({
-        color: '#FF0000',
-        draggable: false
-      }).setLngLat([lng, lat])
+        color: "#FF0000",
+        draggable: false,
+      })
+        .setLngLat([lng, lat])
         .addTo(map.current);
 
       markerRef.current = marker;
-      setStartingCoordinate([lat, lng]);
-            // Fetch from backend
-            const data = {
-              lat: center.lat.toString(),
-              long: center.lng.toString(),
-              radius: radius.toString()
-            };
-            fetch(' http://127.0.0.1:5000/tsp', {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(data => {
-                data = data['ordered_locations'];
-                console.log(data);
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-            });
-    });
+      setStartingCoordinate([lng, lat]);
 
-    map.current.on('moveend', () => {
+      // Fetch from backend
       const center = map.current.getCenter();
       const radius = calculateRadius();
-      
-      console.log('Map Center:', {
-        latitude: center.lat,
-        longitude: center.lng,
-        radius_km: radius
-      });
-   
-      // Fetch from backend
+
       const data = {
         lat: center.lat.toString(),
         long: center.lng.toString(),
-        radius: radius.toString()
+        radius: radius.toString(),
       };
-      
+
+      fetch("http://127.0.0.1:5000/tsp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          const orderedLocations = data["ordered_locations"];
+          console.log("Ordered Locations:", orderedLocations);
+
+          fetchRoute(orderedLocations);
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+        });
     });
 
     map.current.on("load", () => {
@@ -156,14 +135,12 @@ const Map = () => {
         layout: { "line-join": "round", "line-cap": "round" },
         paint: { "line-color": "#ff0000", "line-width": 5 },
       });
-
-      fetchRoute(coordinates);
     });
   }, []);
 
-  const fetchRoute = async (coordinates) => {
-    if (coordinates.length < 2) return;
-  
+  const fetchRoute = async (locations) => {
+    if (!locations || locations.length < 2) return;
+
     let cumulativeRoute = {
       type: "Feature",
       properties: {},
@@ -172,30 +149,35 @@ const Map = () => {
         coordinates: [],
       },
     };
-  
+
+    const coordinates = locations.map((loc) => [loc.long, loc.lat]);
+
     for (let i = 0; i < coordinates.length - 1; i++) {
       const segment = [coordinates[i], coordinates[i + 1]];
-  
+
       const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${segment[0].join(",")};${segment[1].join(",")}?geometries=geojson&access_token=${mapboxgl.accessToken}`;
-  
+
       try {
         const response = await fetch(url);
         const data = await response.json();
-  
+
         if (data.routes.length) {
           const segmentGeometry = data.routes[0].geometry.coordinates;
-  
+
+          // Append new segment to cumulative route
           cumulativeRoute.geometry.coordinates.push(...segmentGeometry);
-  
+
           const routeSource = map.current.getSource("route");
           if (routeSource) {
             routeSource.setData(cumulativeRoute);
           }
-  
-          const bounds = new mapboxgl.LngLatBounds();
-          cumulativeRoute.geometry.coordinates.forEach(coord => bounds.extend(coord));
-          map.current.fitBounds(bounds, { padding: 50 });
-  
+
+          // Add markers for each new stop
+          new mapboxgl.Marker({ color: "blue" })
+            .setLngLat(segment[1])
+            .addTo(map.current);
+
+          // Wait before drawing the next segment (animation effect)
           await new Promise((resolve) => setTimeout(resolve, 2000));
         }
       } catch (error) {
@@ -226,7 +208,7 @@ const Map = () => {
     <div className="flex h-full w-full">
       <style>{styles}</style>
       <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
-      
+
       <button
         onClick={handleLocationCapture}
         className="absolute top-4 left-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-blue-600 transition-colors z-10"
@@ -240,12 +222,12 @@ const Map = () => {
           <p>Latitude: {currentLocation.latitude.toFixed(4)}</p>
           <p>Longitude: {currentLocation.longitude.toFixed(4)}</p>
           <p>Radius: {currentLocation.radius_km.toFixed(1)} km</p>
-          
+
           <div className="mt-4 pt-2 border-t border-gray-600">
             <p className="font-semibold mb-2">Starting Position:</p>
             {startingCoordinate ? (
               <p>
-                {startingCoordinate[0].toFixed(4)}, {startingCoordinate[1].toFixed(4)}
+                {startingCoordinate[1].toFixed(4)}, {startingCoordinate[0].toFixed(4)}
               </p>
             ) : (
               <p className="text-gray-400 text-sm">
